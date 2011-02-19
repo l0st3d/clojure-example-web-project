@@ -67,7 +67,7 @@
     <dependency>
       <groupId>enlive</groupId>
       <artifactId>enlive</artifactId>
-      <version>1.0.0-SNAPSHOT-doooks</version>
+      <version>1.0.0-SNAPSHOT</version>
     </dependency>
     <dependency>
       <groupId>joda-time</groupId>
