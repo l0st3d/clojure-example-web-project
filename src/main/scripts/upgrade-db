@@ -2,56 +2,57 @@
 
 . `dirname $0`/mysql-command
 
-DATABASES_TO_MIGRATE="$@"
+DATABASE_TO_MIGRATE="clj_ex"
 
-cd db-migrations
+cd `dirname $0`/../db-migrations
 
 create_migratons_table() {
     echo 'CREATE TABLE IF NOT EXISTS db_migrations (`id` int(11) UNSIGNED NOT NULL AUTO_INCREMENT, `migration` varchar(255) NOT NULL, `migrated` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (`id`), UNIQUE KEY `migration_unique` (`migration`))  ENGINE=InnoDB DEFAULT CHARSET=utf8' | $MYSQL_CMD $1
 }
 
-for DATABASE_TO_MIGRATE in $DATABASES_TO_MIGRATE ; do
-    echo migrating database: $DATABASE_TO_MIGRATE
-    for DATABASE in $DATABASE_TO_MIGRATE ; do
+if [ `echo 'show databases' | $MYSQL_CMD | grep "^$DATABASE_TO_MIGRATE" | wc -l` -eq 0 ] ; then
+    echo "create database $DATABASE_TO_MIGRATE" | $MYSQL_CMD
+fi
 
-	create_migratons_table $DATABASE_TO_MIGRATE
+echo migrating database: $DATABASE_TO_MIGRATE
+for DATABASE in $DATABASE_TO_MIGRATE ; do
 
-	HAS_RUN_A_MIGRATION=false
+    create_migratons_table $DATABASE_TO_MIGRATE
 
-	for MIGRATION in `ls *.sql *.clj 2>/dev/null | sort -n` ; do
-	    
-	    if echo "INSERT INTO db_migrations SET migration = '${MIGRATION}';" | $MYSQL_CMD -D$DATABASE_TO_MIGRATE 2>/dev/null ; then
-		echo running migration $MIGRATION
-		case $MIGRATION in
-		    *.sql)
-			CMD="cat $MIGRATION | $MYSQL_CMD -D$DATABASE"
-			;;
-		    *.clj)
-			if [ -e ../target/*-jar-with-dependencies.jar ] ; then
-			    CMD="cd .. ; java -cp target/*-jar-with-dependencies.jar clojure.main db-migrations/${MIGRATION} "
-			else
-			    echo "Cannot find jar - please build the code in order to run a clojure migraition" >&2
-			    exit 3
-			fi
-			;;
-		esac
-		if bash -c "$CMD" ; then
-		    HAS_RUN_A_MIGRATION=true
-		else
-		    echo ERROR RUNNING MIGRATION $MIGRATION >&2
-		    echo "DELETE FROM db_migrations WHERE migration = '${MIGRATION}';" | $MYSQL_CMD -D$DATABASE_TO_MIGRATE 2>/dev/null
-		    exit 2
-		fi
+    HAS_RUN_A_MIGRATION=false
+
+    for MIGRATION in `ls *.sql *.clj 2>/dev/null | sort -n` ; do
+	
+	if echo "INSERT INTO db_migrations SET migration = '${MIGRATION}';" | $MYSQL_CMD -D$DATABASE_TO_MIGRATE 2>/dev/null ; then
+	    echo running migration $MIGRATION
+	    case $MIGRATION in
+		*.sql)
+		    CMD="cat $MIGRATION | $MYSQL_CMD -D$DATABASE"
+		    ;;
+		*.clj)
+		    if [ -e ../target/*-jar-with-dependencies.jar ] ; then
+			CMD="cd .. ; java -cp target/*-jar-with-dependencies.jar clojure.main db-migrations/${MIGRATION} "
+		    else
+			echo "Cannot find jar - please build the code in order to run a clojure migraition" >&2
+			exit 3
+		    fi
+		    ;;
+	    esac
+	    if bash -c "$CMD" ; then
+		HAS_RUN_A_MIGRATION=true
 	    else
-		echo MIGRATION ALREADY RUN MIGRATION $MIGRATION
-		if $HAS_RUN_A_MIGRATION ; then
-		    echo FOUND A MIGRATION THAT HAS BEEN RUN AFTER RUNNING ONE ... DATABASE $DATABASE_TO_MIGRATE IN AN INCONSISTENT STATE ... FIX IT
-		    exit 1
-		fi
+		echo ERROR RUNNING MIGRATION $MIGRATION >&2
+		echo "DELETE FROM db_migrations WHERE migration = '${MIGRATION}';" | $MYSQL_CMD -D$DATABASE_TO_MIGRATE 2>/dev/null
+		exit 2
 	    fi
-	done
+	else
+	    echo MIGRATION ALREADY RUN MIGRATION $MIGRATION
+	    if $HAS_RUN_A_MIGRATION ; then
+		echo FOUND A MIGRATION THAT HAS BEEN RUN AFTER RUNNING ONE ... DATABASE $DATABASE_TO_MIGRATE IN AN INCONSISTENT STATE ... FIX IT
+		exit 1
+	    fi
+	fi
     done
 done
 
-cd ..
 exit 0
