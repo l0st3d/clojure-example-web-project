@@ -1,0 +1,8 @@
+* Clojure example project
+** The Point
+** The tech choices
+*** Enlive
+*** ClojureQL
+*** Maven
+*** MySQL
+*** Emacs/Slime/Swank
