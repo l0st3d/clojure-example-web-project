@@ -1,6 +1,6 @@
 (ns infrastructure.boot
   (:require
-   app.web-service
+   [app.web-service :as app]
    swank.swank
    [clojure.contrib.logging :as log]
    [clojure.contrib.find-namespaces :as find-ns]
@@ -18,7 +18,7 @@
 
 (defn start-web-service []
   (log/info "starting web service ...")
-  (rivelin.web-service/start-webservice))
+  (app/start-webservice))
 
 (defn -main [ & args]
   (start-mycroft)
