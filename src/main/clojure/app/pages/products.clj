@@ -7,12 +7,15 @@
 
 (def page-size 10)
 
+(defn format-price [price]
+  (String/format "%.2f" (to-array [(double (/ price 100))])))
+
 (html/defsnippet product-table-row
   (:index templates) [:table.product_list :> :tbody :> :tr]
   [product]
-  [:.product_name] (html/content (str product))
-  [:.product_desc] (html/content (str product))
-  [:.product_price] (html/content (str product)))
+  [:.product_name] (html/content (:name product))
+  [:.product_desc] (html/content (:description product))
+  [:.product_price] (html/content (-> product :price format-price)))
 
 (html/deftemplate index (:index templates)
   [request]

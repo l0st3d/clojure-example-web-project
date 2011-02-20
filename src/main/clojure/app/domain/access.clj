@@ -2,12 +2,12 @@
   (:require [clojureql.core :as cql]
 	    [infrastructure.db :as db]))
 
-(defn extract-map [data prefix]
+(defn- extract-map [data-line prefix]
   (reduce #(let [k (name (key %2))]
 	     (if (.matches k (str prefix ".*"))
 	       (assoc %1 (keyword (.replaceAll k (str "^" prefix) ""))
 		      (val %2))
-	       %1)) {} data))
+	       %1)) {} data-line))
 
 (defn- collect [prefix extract-element]
   (fn [coll data]
@@ -19,7 +19,8 @@
 (def products (-> (cql/table db/spec :products)
 		  (cql/project [[:id :as :product_id]
 				[:name :as :product_name]
-				[:description :as :product_description]])))
+				[:description :as :product_description]
+				[:price :as :product_price]])))
 
 ;; (def customers (-> ))
 
@@ -27,4 +28,5 @@
   (let [product-data @(-> products
 			  (cql/drop offset)
 			  (cql/take page-size))]
-    (reduce (collect "product_" (extract-map)) [] product-data)))
+    #_ (reduce (collect "product_" (extract-map)) [] product-data)
+    (map #(extract-map % "product_") product-data)))
