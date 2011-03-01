@@ -28,5 +28,11 @@
   (let [product-data @(-> products
 			  (cql/drop offset)
 			  (cql/take page-size))]
-    #_ (reduce (collect "product_" (extract-map)) [] product-data)
     (map #(extract-map % "product_") product-data)))
+
+(defn find-product [product-id]
+  (-> products
+      (cql/select (cql/where (= :id product-id)))
+      deref
+      first
+      (extract-map "product_")))
